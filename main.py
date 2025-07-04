@@ -4,6 +4,7 @@ import numpy as np
 ##### TODO #########################################
 ### IMPLEMENT 'getMyPosition' FUNCTION #############
 ### TO RUN, RUN 'eval.py' ##########################
+### THIS IS GOOD FOR REAL VRO ######################
 
 nInst = 50
 currentPos = np.zeros(nInst)
