@@ -1,4 +1,5 @@
 # Brief
+# Or Long, whichever.
 
 Make the best trading algorithm!
 
