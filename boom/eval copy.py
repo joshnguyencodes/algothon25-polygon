@@ -2,8 +2,10 @@
 
 import numpy as np
 import pandas as pd
+import os
 # from main import getMyPosition as getPosition
 from main_2 import getMyPosition as getPosition
+os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
 nInst = 50
 nt = 0

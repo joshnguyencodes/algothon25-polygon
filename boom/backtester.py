@@ -14,6 +14,8 @@ from types import ModuleType, FunctionType
 from matplotlib.axes import Axes
 import json
 
+os.chdir(os.path.dirname(os.path.abspath(__file__)))
+
 # CONSTANTS #######################################################################################
 START_DAY: int = 0
 END_DAY: int = 0

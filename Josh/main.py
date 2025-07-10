@@ -1,57 +1,90 @@
-
 import numpy as np
-
-##### TODO #########################################
-### IMPLEMENT 'getMyPosition' FUNCTION #############
-### TO RUN, RUN 'eval.py' ##########################
 
 nInst = 50
 currentPos = np.zeros(nInst)
+entryPrice = np.full(nInst, np.nan)
+stopPrice = np.full(nInst, np.nan)
+positionSide = np.zeros(nInst)  # 1 for long, -1 for short, 0 for flat
 
+# --- Strategy Parameters ---
+N = 40  # Donchian channel lookback (can optimize 20-100)
+ATR_period = 20
+stop_multiplier = 2.0  # ATR multiple for trailing stop
+risk_pct = 0.01  # 1% of equity per trade
 
 def getMyPosition(prcSoFar):
-    global currentPos
+    global currentPos, entryPrice, stopPrice, positionSide
     (nins, nt) = prcSoFar.shape
+    equity = 50000 # Assume starting equity (can be tracked dynamically)
+    newPos = np.array(currentPos)
 
-    lookback = 5
-
-    if (nt < lookback + 1):
+    if nt < max(N, ATR_period) + 1:
         return np.zeros(nins)
 
-    performance_signal = np.log(prcSoFar[:, -1] / prcSoFar[:, -(lookback + 1)])
+    # Calculate Donchian Channel
+    upper = np.max(prcSoFar[:, -N:], axis=1) + 10
+    lower = np.min(prcSoFar[:, -N:], axis=1) - 10
+    middle = (upper + lower) / 2
+    price = prcSoFar[:, -1]
 
-    ranks = np.argsort(performance_signal)
+    # Calculate ATR
+    high = np.max(prcSoFar[:, -ATR_period:], axis=1)
+    low = np.min(prcSoFar[:, -ATR_period:], axis=1)
+    prev_close = prcSoFar[:, -ATR_period-1:-1]
+    tr1 = high - low
+    tr2 = np.abs(high - prev_close[:, -1])
+    tr3 = np.abs(low - prev_close[:, -1])
+    tr = np.maximum.reduce([tr1, tr2, tr3])
+    ATR = np.mean(tr, axis=0) + 1e-6  # avoid zero
 
+    for i in range(nins):
+        # --- Entry Logic ---
+        if positionSide[i] == 0:
+            # Long breakout
+            if price[i] > upper[i]:
+                positionSide[i] = 1
+                entryPrice[i] = price[i]
+                stopPrice[i] = price[i] - stop_multiplier * ATR[i]
+            # Short breakout
+            elif price[i] < lower[i]:
+                positionSide[i] = -1
+                entryPrice[i] = price[i]
+                stopPrice[i] = price[i] + stop_multiplier * ATR[i]
 
-    trade_signal = np.zeros(nins)
+        # --- Exit Logic ---
+        if positionSide[i] == 1:
+            # Exit long if price < middle band or hit stop
+            if price[i] < middle[i] or price[i] < stopPrice[i]:
+                positionSide[i] = 0
+                entryPrice[i] = np.nan
+                stopPrice[i] = np.nan
+        elif positionSide[i] == -1:
+            # Exit short if price > middle band or hit stop
+            if price[i] > middle[i] or price[i] > stopPrice[i]:
+                positionSide[i] = 0
+                entryPrice[i] = np.nan
+                stopPrice[i] = np.nan
 
+        # --- ATR Trailing Stop Update ---
+        if positionSide[i] == 1:
+            stopPrice[i] = max(stopPrice[i], price[i] - stop_multiplier * ATR[i])
+        elif positionSide[i] == -1:
+            stopPrice[i] = min(stopPrice[i], price[i] + stop_multiplier * ATR[i])
 
-    top_10_indices = ranks[-20:]
-    trade_signal[top_10_indices] = performance_signal[top_10_indices]
+        # --- Position Sizing ---
+        if positionSide[i] != 0:
+            risk_per_trade = equity * risk_pct
+            if positionSide[i] == 1:
+                stop_dist = price[i] - stopPrice[i]
+            else:
+                stop_dist = stopPrice[i] - price[i]
+            if stop_dist > 0:
+                size = int(risk_per_trade / stop_dist)
+                newPos[i] = positionSide[i] * size
+            else:
+                newPos[i] = 0
+        else:
+            newPos[i] = 0
 
-
-    worst_performers_indices = ranks[:nins]
-    short_indices = []
-    for idx in worst_performers_indices:
-        if len(short_indices) >= 10:
-            break
-        if performance_signal[idx] < 0:
-            short_indices.append(idx)
-
-    if short_indices:
-        trade_signal[short_indices] = performance_signal[short_indices]
-
-
-    lNorm = np.sqrt(trade_signal.dot(trade_signal))
-
-
-    if lNorm == 0:
-        return currentPos
-
-    normalized_signal = trade_signal / lNorm
-
-
-    rpos = np.array([int(x) for x in 5000 * normalized_signal / prcSoFar[:, -1]])
-    currentPos = np.array([int(x) for x in currentPos + rpos])
-
+    currentPos = newPos
     return currentPos

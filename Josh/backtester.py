@@ -14,6 +14,8 @@ from types import ModuleType, FunctionType
 from matplotlib.axes import Axes
 import json
 
+
+os.chdir(os.path.dirname(os.path.abspath(__file__)))
 # CONSTANTS #######################################################################################
 START_DAY: int = 0
 END_DAY: int = 0
@@ -109,7 +111,7 @@ class Params:
         strategy_function_name: str = default_strategy_function_name,
         strategy_function: FunctionType | None = None,
         start_day: int = 1,
-        end_day: int = 750,
+        end_day: int = 1000,
         enable_commission: bool = True,
         graphs: List[str] = ["cum-pnl", "sharpe-heat-map", "daily-pnl"],
         prices_filepath: str = "prices.txt",
@@ -125,7 +127,6 @@ class Params:
         self.graphs = graphs
         self.prices_filepath: str = prices_filepath
         self.instruments_to_test: List[int] = instruments_to_test
-
 
 
 # HELPER FUNCTIONS ###############################################################################
