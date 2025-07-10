@@ -7,7 +7,7 @@ stopPrice = np.full(nInst, np.nan)
 positionSide = np.zeros(nInst)  # 1 for long, -1 for short, 0 for flat
 
 # --- Strategy Parameters ---
-N = 40  # Donchian channel lookback (can optimize 20-100)
+N = 100  # Donchian channel lookback (can optimize 20-100)
 ATR_period = 20
 stop_multiplier = 2.0  # ATR multiple for trailing stop
 risk_pct = 0.01  # 1% of equity per trade
@@ -22,8 +22,8 @@ def getMyPosition(prcSoFar):
         return np.zeros(nins)
 
     # Calculate Donchian Channel
-    upper = np.max(prcSoFar[:, -N:], axis=1) + 10
-    lower = np.min(prcSoFar[:, -N:], axis=1) - 10
+    upper = np.max(prcSoFar[:, -N:], axis=1) *0.99
+    lower = np.min(prcSoFar[:, -N:], axis=1) *0.99
     middle = (upper + lower) / 2
     price = prcSoFar[:, -1]
 
@@ -35,7 +35,7 @@ def getMyPosition(prcSoFar):
     tr2 = np.abs(high - prev_close[:, -1])
     tr3 = np.abs(low - prev_close[:, -1])
     tr = np.maximum.reduce([tr1, tr2, tr3])
-    ATR = np.mean(tr, axis=0) + 1e-6  # avoid zero
+    ATR = tr + 1e-6  # avoid zero
 
     for i in range(nins):
         # --- Entry Logic ---
